@@ -32,3 +32,11 @@ Install required libraries:
 pip install -r requirements.txt
 ```
 
+### Data
+
+The testing data is from the [ATC shopping center tracking dataset](https://dil.atr.jp/crest2010_HRI/ATC_dataset/).
+
+The original dataset is preprocessed and only one out of every five rows was retained for experiments.
+
+## Acknowlegement
+Part of our code is reimplemented from [CLiFF-Map](https://github.com/tkucner/CLiFF-map-matlab). We thank the authors for releasing their codes.
