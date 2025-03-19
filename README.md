@@ -5,8 +5,9 @@ This repository contains code for the paper Event-Triggered Maps of Dynamics: A 
 ## About
 
 This work automatically identifies regions of interest and uses Neural SDEs to model temporal changes in motion patterns. A diffusion model is integrated to generate intermediate data for the framework. 
-
-![image (15)](https://github.com/user-attachments/assets/7877d782-c7a9-41d4-b59f-4630d538435f)
+<div align='center'>
+  <br><img src="ETMoD.gif" width=70%>
+</div>
 
 ## Setup
 
@@ -32,11 +33,18 @@ Install required libraries:
 pip install -r requirements.txt
 ```
 
+### What can I find in this repository?
+The repository is accompanied by scripts showing how to use ETMoD:
+* *gridshift.py* - This example shows how to cluster the spatial data out of a set of observations collected in a set of locations.
+
+* *gs_em.py* - This example shows how to obtain the multi-modal distribution of the velocity data in each context-awared cell.
+
+* *sde_diff.py* - This script contains our SDE model for temporal modelling.
+
+* *diffusion.py* - This script contains our diffusion model for generating intermediate data.
+
 ### Data
-
 The testing data is from the [ATC shopping center tracking dataset](https://dil.atr.jp/crest2010_HRI/ATC_dataset/).
-
-The original dataset is preprocessed and only one out of every five rows is retained for experiments.
 
 ## Acknowlegement
 Part of our code is reimplemented from [CLiFF-Map](https://github.com/tkucner/CLiFF-map-matlab). We thank the authors for releasing their codes.
