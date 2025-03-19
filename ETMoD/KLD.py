@@ -86,10 +86,4 @@ def sample_semi_wrapped_normal(mean, cov, n_samples=1000, max_k=2):
 
     return samples
 
-# Example usage
-# np.random.seed(42)
-# V_o = np.random.rand(100, 2)  # 100 samples from a 2D distribution
-# V_s = np.random.rand(120, 2)  # 120 samples from another 2D distribution
 
-# divergence = compute_divergence(V_o, V_s, k=5)
-# print(f"Estimated Divergence: {divergence}")

@@ -25,12 +25,12 @@ def set_all_seeds(seed):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
 
-folder_path = "/u/23/shij4/unix/Desktop/Gridcluster/grid_1024_drop/em_16"
+folder_path = "/u/23/shij4/unix/Desktop/Gridcluster/grid_1024_drop/em_**"
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 set_all_seeds(1)
-pattern = os.path.join(folder_path, "grid_16_interval_*_em_results.npz")
+pattern = os.path.join(folder_path, "grid_**_interval_*_em_results.npz")
 
 # Get all matching files
 grid_0_files = sorted(glob.glob(pattern))
@@ -71,7 +71,6 @@ def match_clusters(prev_means, curr_means):
             angle_cost[i, j] = angular_distance(prev_angles[i], curr_angles[j])
 
     cost_matrix = speed_cost + angle_cost
-    # print("cost_matrix:\n", cost_matrix)
 
     col_ind = np.argmin(cost_matrix, axis=1)  
     row_ind = np.arange(n_prev) 
@@ -91,14 +90,11 @@ index = []
 
 for t, param_file in enumerate(grid_0_files):
     
-    # print(param_file)
     means = np.load(param_file)["means"]
-    # print("means",means)
     if means.shape[0] == 0:
         continue
     covs = np.load(param_file)["covs"]
     weights = np.load(param_file)["weights"]
-    # print("weight", weights)
 
     if prev_means is not None:
 
@@ -110,18 +106,13 @@ for t, param_file in enumerate(grid_0_files):
     all_means_padded.append(means)
     all_covs_padded.append(covs)
     all_weight_padded.append(weights)
-    # print(t)
     
 all_means_padded = torch.tensor(np.stack(all_means_padded), dtype=torch.float32).to(device)  # (N, max_k, 3)
 all_covs_padded = torch.tensor(np.stack(all_covs_padded), dtype=torch.float32).to(device) # (N, max_k, 2, 2)
-# all_weight_padded = torch.tensor(np.stack(all_weight_padded), dtype=torch.float32).to(device)
-print("all_means_padded",all_means_padded)
 # all_means_padded[:,:,1] = wrap_to_2pi(all_means_padded[:,:,1])
 num_epochs = 100
 x_t = all_means_padded
-# print("x_t",x_t)
 min_loss = float("inf")
-# x_t = x_t[:, :, 0].reshape(x_t.shape[0],x_t.shape[1],1)
 time_series_vel = []  # For velocity
 time_series_angle = []  # For angle
 time_series_cov = []
@@ -148,56 +139,67 @@ for t in range(len(index)):
 time_series = np.column_stack((time_series_vel, time_series_angle))  # Shape: (num_timesteps, 2)
 time_series_cov = np.array(time_series_cov)
 
-print("time_series",time_series)
 
-# Combine interpolated data
-x_interpolated = time_series
+x = time_series
 # Convert to Tensor
-x_t_interpolated = torch.tensor(x_interpolated, device=device).reshape(-1, 1, 2).to(torch.float32)
+x_t = torch.tensor(x, device=device).reshape(-1, 1, 2).to(torch.float32)
 
-ts = torch.linspace(0, 1, x_t_interpolated.shape[0]).to(device).to(torch.float32)
+ts = torch.linspace(0, 1, x_t.shape[0]).to(device).to(torch.float32)
 state_size = x_t.shape[2]
 
 sde = SDE(n_inputs = state_size, n_outputs = state_size, device = device)
 optimizer = optim.Adam(sde.parameters(), lr=0.01)
+for epoch in range(num_epochs):
+    epoch_loss = 0.0
+    optimizer.zero_grad()
 
-sde.load_state_dict(torch.load("/u/23/shij4/unix/Desktop/Gridcluster/sde_model_grid162.pth"))
+    ys = torchsde.sdeint(sde, x_t[0], ts, method='milstein').to(device)
+
+    loss = F.smooth_l1_loss(ys, x_t)  
+
+    loss.backward()
+
+    optimizer.step()
+
+    epoch_loss += loss.item()
+    if epoch_loss <= min_loss:
+        min_loss = epoch_loss
+        torch.save(sde.state_dict(), "/u/23/shij4/unix/Desktop/Gridcluster/sde_model_grid**.pth")
+        print(f"Save model, minimum Loss: {epoch_loss:.4f}")
+    
+    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}")
+torch.save(sde.state_dict(), "/u/23/shij4/unix/Desktop/Gridcluster/sde_model_grid**.pth")
+sde.load_state_dict(torch.load("/u/23/shij4/unix/Desktop/Gridcluster/sde_model_grid**.pth"))
 sde.eval()
 with torch.no_grad():
-    ys = torchsde.sdeint(sde, x_t_interpolated[0], ts, method='milstein') 
-ys_np = ys.cpu().numpy().squeeze()  # Shape: (num_timesteps, 2)
+    ys = torchsde.sdeint(sde, x_t[0], ts, method='milstein') 
+ys_np = ys.cpu().numpy().squeeze()  
 
-print("sde data:", ys_np)
 
 from universal_divergence import estimate
-gt_data_path = "/u/23/shij4/unix/Desktop/Gridcluster/grid_1024_drop/output/grid_16_interval_*.csv"
+gt_data_path = "/u/23/shij4/unix/Desktop/Gridcluster/grid_1024_drop/output/grid_**_interval_*.csv"
 
-# # Find all files matching the pattern
 file_paths = glob.glob(gt_data_path)
 
-vel_target = 1.1
-angle_target = 2.7
-vel_tolerance = 1
-angle_tolerance = 0.5
+vel_target = "***"
+angle_target = "***"
+vel_tolerance = "***"
+angle_tolerance = "***"
+# adjust according to data
 
 for t, file_path in enumerate(file_paths):
-    # Load the data
     df = pd.read_csv(file_path)
-    # print(t)
     
-    # Extract velocity and motion angle
     velocity = df.iloc[:, 4].to_numpy()
     motion_angle = df.iloc[:, 5].to_numpy()
     circular_linear_data = np.column_stack((velocity, motion_angle))
     circular_linear_data[:,1] = wrap_to_2pi(circular_linear_data[:,1])
 
-    # Apply filtering
     filtered_data = circular_linear_data[
         (np.abs(circular_linear_data[:, 0] - vel_target) < vel_tolerance) & 
         (np.abs(circular_linear_data[:, 1] - angle_target) < angle_tolerance)
     ]
     sde_samples = sample_semi_wrapped_normal(ys_np[t], time_series_cov[t], n_samples=filtered_data.shape[0])
-    # print(sde_samples)
     divergence = estimate(filtered_data, sde_samples, k=2)
 
     print(divergence)

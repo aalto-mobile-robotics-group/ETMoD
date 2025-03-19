@@ -116,7 +116,7 @@ def e_step_new(data, weights, means, covariances, max_k=3):
                 prob = weights[j] * multivariate_normal.pdf(data[i], mean=means[j,:] + shift, cov=covariances[j,:,:])
                 responsibilities[i, j, k + max_k] = prob  # Store for k-th wrapping
                 normalization_factor += prob
-            # print(normalization_factor)
+            
             # Normalize responsibilities for (i, j, k)
         normalization_factor = max(normalization_factor, np.finfo(float).eps)  
         responsibilities[i, :, :] /= normalization_factor
@@ -124,7 +124,7 @@ def e_step_new(data, weights, means, covariances, max_k=3):
 
     responsibilities = np.nan_to_num(responsibilities, nan=0.0, posinf=1e-6, neginf=1e-6)
 
-            # print(responsibilities[i, j, :])
+           
 
     return responsibilities
 
@@ -191,26 +191,22 @@ def swgmm_em_new(data, weights, means, covs, max_k=3, max_iter=100, tol=1e-3):
     """
     N, D = data.shape
 
-    # Initialize parameters randomly
     weights = weights
-    # means = np.random.rand(num_clusters, D) * 2 * np.pi  # θ is periodic
     means = means
-    # covariances = np.array([np.eye(D) for _ in range(num_clusters)])
     covariances = covs
 
     prev_log_likelihood = -np.inf
 
     for iteration in range(max_iter):
         # E-Step
-        # covariances = np.nan_to_num(covariances, nan=0.0, posinf=1e6, neginf=-1e6)
-        # covariances = ensure_positive_definite(covariances)
+        
         responsibilities = e_step_new(data, weights, means, covariances, max_k)
 
         # M-Step
         weights, means, covariances = m_step_new(data, responsibilities, max_k)
 
         # Compute log-likelihood
-        # print(covariances)
+        
         current_log_likelihood = log_likelihood_new(data, weights, means, covariances, max_k)
 
         # Check for convergence
@@ -255,10 +251,7 @@ if __name__ == "__main__":
         cov_matrices = [covs[i].reshape(2, 2) for i in range(len(covs))]
         cov_matrices = np.array(cov_matrices)
         
-        # all_means.append(means)
-        # all_covs.append(cov_matrices)
-
-        # calculate initial weight
+        
         max_cluster = df_params["cluster_id"].max()
         num_clusters = max_cluster + 1  
         weights = np.ones(num_clusters) / num_clusters  
@@ -268,7 +261,6 @@ if __name__ == "__main__":
             cov_matrices[j,:,:] = np.diag([10**(f[0] - 1), 10**(f[1] - 1)])  # Set the diagonal elements to be adjusted by a power of 10
             epsilon = 1e-6  # small regularization constant
             cov_matrices[j,:,:] += epsilon * np.eye(2)
-        # print(cov_matrices)
 
         weights_new, means_new, covs_new = swgmm_em_new(velocity_data, weights, means, cov_matrices, max_k=2)
         cov_flattened = [covs_new[i].flatten() for i in range(num_clusters)]

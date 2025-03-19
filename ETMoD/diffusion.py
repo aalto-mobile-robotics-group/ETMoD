@@ -23,8 +23,8 @@ set_all_seeds(1)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load data
-file_path_1 = "/u/23/shij4/unix/Desktop/Gridcluster/grid_1024_drop/output/grid_0_interval_1351040400.csv"
-file_path_2 = "/u/23/shij4/unix/Desktop/Gridcluster/grid_1024_drop/output/grid_0_interval_1351042200.csv"
+file_path_1 = "/u/23/shij4/unix/Desktop/Gridcluster/grid_1024_drop/output/grid_*_interval_****.csv"
+file_path_2 = "/u/23/shij4/unix/Desktop/Gridcluster/grid_1024_drop/output/grid_*_interval_****.csv"
 df1 = pd.read_csv(file_path_1)
 df2 = pd.read_csv(file_path_2)
 
@@ -43,18 +43,14 @@ circular_linear_data = np.column_stack((velocity, motion_angle))
 trans_data = preprocess_circular_linear_data_sc(circular_linear_data, w=3)
 centers, membership = GS.fit_predict(trans_data)
 unique_clusters = np.unique(membership)
-# print("centers", centers)
 
 means = []
 cluster_data = []
 for cluster in unique_clusters:
-    # print("1")
     cluster_data.append(circular_linear_data[membership == cluster])
     mean,covs = mle_complex(circular_linear_data[membership == cluster])
     means.append(mean)
-# print(means)
 
-# Define dataset
 class TabularDataset(Dataset):
     def __init__(self, data):
         self.data = torch.tensor(data, dtype=torch.float32).to(device)  # Move to GPU
@@ -68,27 +64,24 @@ class TabularDataset(Dataset):
         return img
 
 dataset = TabularDataset(cluster_data[1])
-# Define the UNet model
+
 model = Unet(
-    dim=64,  # Dimension of the feature maps
-    dim_mults=(1, 2, 4, 8),  # Multipliers for the dimensions
-    channels=2  # Treat tabular data as 2-channel "images"
+    dim=64,  
+    dim_mults=(1, 2, 4, 8),  
+    channels=2  
 ).to(device)
 
-# Define the diffusion model
 diffusion = GaussianDiffusion(
     model,
-    image_size=8,  # Change from 1 to 8
+    image_size=8,  
     timesteps=1000
 ).to(device)
 batch_size = 128
 num_epochs = 100
 learning_rate = 1e-4
 
-# Create DataLoader for batching
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-# Define optimizer (AdamW is good for diffusion models)
 optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
 # Training loop
@@ -96,50 +89,30 @@ for epoch in range(num_epochs):
     total_loss = 0.0
     
     for batch in dataloader:
-        batch = batch.to(device)  # Move batch to GPU if available
+        batch = batch.to(device)  
 
-        optimizer.zero_grad()  # Reset gradients
-        # print(batch.shape)
+        optimizer.zero_grad()  
 
-        loss = diffusion(batch)  # Compute loss using diffusion model
+        loss = diffusion(batch)  
 
-        loss.backward()  # Backpropagation
-        optimizer.step()  # Update model weights
+        loss.backward() 
+        optimizer.step()  
 
         total_loss += loss.item()
 
-    avg_loss = total_loss / len(dataloader)  # Compute average loss for epoch
+    avg_loss = total_loss / len(dataloader) 
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {avg_loss:.4f}")
 
 # # Save model after training
-# torch.save(model.state_dict(), "diffusion_model.pth")
-# print("Model saved successfully!")
+torch.save(model.state_dict(), "diffusion_model.pth")
 # Load the trained model
 model.load_state_dict(torch.load("diffusion_model.pth", map_location=device))
 model.eval()  # Set model to evaluation mode
 print("Model loaded successfully!")
 num_samples = 1000  # Number of samples to generate
 
-# # Generate noise input (random Gaussian noise)
 samples = diffusion.sample(batch_size = num_samples).detach().cpu().numpy()  # Convert to NumPy
-# # print(samples.shape)
-# # Convert 8x8 samples back to 2D (velocity, motion_angle)
-original_shape_samples = samples.mean(axis=(2, 3))  # Average over (8,8) pixels
-# print(original_shape_samples.shape)
+original_shape_samples = samples.mean(axis=(2, 3))  
 generated_df = pd.DataFrame(original_shape_samples, columns=["velocity", "motion_angle"])
 generated_df.to_csv("generated_samples.csv", index=False)
-print("Generated samples saved to generated_samples.csv")
-file_path_3 = "/u/23/shij4/unix/Desktop/Gridcluster/generated_samples.csv"
-df3 = pd.read_csv(file_path_3).to_numpy()
-transformed_data = preprocess_circular_linear_data_sc(df3, w=3)
-centers, membership = GS.fit_predict(transformed_data)
-# print(centers)
-means = []
-cluster_data = []
-covs = []
-for cluster in unique_clusters:
-    cluster_data.append(df3[membership == cluster])
-    mean,cov = mle_complex(df3[membership == cluster])
-    means.append(mean)
-    covs.append(cov)
-print(means)
+

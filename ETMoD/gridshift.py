@@ -108,7 +108,6 @@ class GridShiftPP:
         n, d = X.shape
         X_shifted = np.copy(X)
         membership = np.full(n, -1, dtype=np.int32)
-        # membership_new = np.full(n, -1, dtype=np.int32)
 
         iteration = 0
         base = 3
@@ -128,9 +127,7 @@ class GridShiftPP:
             cluster_grid[bin_key][0] += X_shifted[i]
             cluster_grid[bin_key][1] += 1
             membership[i] = map_cluster[bin_key]
-        # print("cluster_grid_old",cluster_grid)
 
-        # Iterative process
         for _ in range(self.iterations):
             means = defaultdict(lambda: [np.zeros(d), 0])
             temp_new = 0
@@ -150,37 +147,27 @@ class GridShiftPP:
                 if bin_coord in means:
                     mean_sum, mean_count = means[bin_coord]
                     cluster_grid[bin_coord][0] = mean_sum / mean_count
-                    # update mean
-            # print(means)
+               
             new_cluster_grid = defaultdict(lambda: [np.zeros(d), 0])
             new_map_cluster = {}
 
             for bin_coord, (mean, count) in cluster_grid.items():
                 new_bin_coord = tuple((mean // self.bandwidth).astype(int))
-                # print("new_bin_coord",new_bin_coord)
                 new_cluster_grid[new_bin_coord][0] += mean*count
                 new_cluster_grid[new_bin_coord][1] += count
-                # if new_bin_coord not in new_map_cluster:
-                #     new_map_cluster[new_bin_coord] = temp_new
-                #     temp_new += 1
-            # for new_bin_coord in new_map_cluster:
-            #     for i in range(n):
-            #         if 
-            # print(cluster_grid,new_cluster_grid)
+                
             if check_convergence(cluster_grid,new_cluster_grid):
                 print("Converge.")
                 break
 
             cluster_grid = new_cluster_grid
 
-        # print("cluster_grid",cluster_grid)
         cluster_centers = np.array([sum_points / count for sum_points, count in cluster_grid.values()])
        
         for i in range(n):
             distances = [distance.euclidean(X[i], center) for center in cluster_centers]
             membership[i] = np.argmin(distances)
-        # print("cluster_centers",cluster_centers)
-        # print("membership",membership)
+        
         return cluster_centers, membership
        
 if __name__ == "__main__":
@@ -215,5 +202,3 @@ if __name__ == "__main__":
     # Combine the clusters into a single label
     combined_labels = membership_pos * max_speed_clusters + membership
     Draw_cluster_loc(df, membership_pos)
-    # membership_df = pd.DataFrame({'membership_test_pos': membership_pos})
-    # membership_df.to_csv('membership_test_pos.csv', index=False)
